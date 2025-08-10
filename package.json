@@ -11,19 +11,27 @@
   "dependencies": {
     "@ai-sdk/react": "^2.0.9",
     "@openrouter/ai-sdk-provider": "^1.1.2",
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.12",
     "ai": "^5.0.9",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "fuse.js": "^7.1.0",
+    "lucide-react": "^0.539.0",
     "next": "15.4.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "tailwind-merge": "^3.3.1",
     "zod": "^4.0.17"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "tw-animate-css": "^1.3.6",
+    "typescript": "^5"
   }
 }
