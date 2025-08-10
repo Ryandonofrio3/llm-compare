@@ -8,6 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 
 type OpenRouterModel = {
   id: string
@@ -167,22 +170,22 @@ function ModelSearch({
 
   return (
     <div className="w-full max-w-md">
-      <label className="block text-sm text-neutral-700 dark:text-neutral-200 mb-1">{label}</label>
+      <Label className="text-sm mb-1">{label}</Label>
       <div className="relative">
-        <button
-          type="button"
-          className="w-full border rounded px-3 py-2 text-left bg-white text-black dark:bg-neutral-900 dark:text-white"
+        <Button
+          variant="outline"
+          className="w-full justify-start text-left font-normal"
           onClick={() => {
             setOpen((o) => !o)
             setTimeout(() => inputRef.current?.focus(), 0)
           }}
         >
           {selectedLabel}
-        </button>
+        </Button>
         {open && (
-          <div className="absolute z-50 mt-1 w-full border rounded bg-white text-black dark:bg-neutral-900 dark:text-white shadow">
-            <div className="p-2">
-              <input
+          <Card className="absolute z-50 mt-1 w-full shadow-lg">
+            <CardContent className="p-2">
+              <Input
                 ref={inputRef}
                 value={query}
                 onChange={(e) => {
@@ -191,29 +194,30 @@ function ModelSearch({
                 }}
                 onKeyDown={onKeyDown}
                 placeholder={placeholder || "Search models by name or id..."}
-                className="w-full border rounded px-3 py-2 bg-white text-black dark:bg-neutral-800 dark:text-white"
+                className="mb-2"
               />
-            </div>
-            <ul className="max-h-72 overflow-auto">
-              {results.length === 0 && (
-                <li className="px-3 py-2 text-sm text-neutral-500">No results</li>
-              )}
-              {results.map((m, i) => (
-                <li
-                  key={m.id}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => pick(m)}
-                  onMouseEnter={() => setActive(i)}
-                  className={`px-3 py-2 text-sm cursor-pointer ${
-                    i === active ? "bg-neutral-100 dark:bg-neutral-800" : ""
-                  }`}
-                >
-                  <div className="font-medium">{m.name || m.id}</div>
-                  <div className="text-xs text-neutral-600 dark:text-neutral-400">{m.id}</div>
-                </li>
-              ))}
-            </ul>
-          </div>
+              <Separator className="mb-2" />
+              <div className="max-h-72 overflow-auto">
+                {results.length === 0 && (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">No results</div>
+                )}
+                {results.map((m, i) => (
+                  <div
+                    key={m.id}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => pick(m)}
+                    onMouseEnter={() => setActive(i)}
+                    className={`px-3 py-2 text-sm cursor-pointer rounded hover:bg-accent ${
+                      i === active ? "bg-accent" : ""
+                    }`}
+                  >
+                    <div className="font-medium">{m.name || m.id}</div>
+                    <div className="text-xs text-muted-foreground">{m.id}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
@@ -234,31 +238,34 @@ function Panel({
   stop: () => void
 }) {
   return (
-    <div className="border rounded-lg p-3 h-[60vh] flex flex-col bg-white/90 dark:bg-neutral-950/90">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-medium text-sm text-neutral-900 dark:text-neutral-100">{title}</h3>
-        <span className="text-xs text-neutral-600 dark:text-neutral-400">{modelId}</span>
-      </div>
-      <div className="flex-1 overflow-auto space-y-2 text-sm text-neutral-900 dark:text-neutral-100">
+    <Card className="h-[60vh] flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm">{title}</CardTitle>
+          <Badge variant="outline" className="text-xs">{modelId}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 overflow-auto space-y-2 text-sm pt-0">
         {messages.map((m) => (
           <div key={m.id} className="whitespace-pre-wrap">
-            <span className="font-semibold mr-1">
-              {m.role === "user" ? "User:" : "AI:"}
-            </span>
+            <Badge variant={m.role === "user" ? "default" : "secondary"} className="text-xs mr-2">
+              {m.role === "user" ? "User" : "AI"}
+            </Badge>
             {m.parts.map((p, i) => (p.type === "text" ? <span key={i}>{p.text}</span> : null))}
           </div>
         ))}
-      </div>
-      <div className="mt-2 flex items-center gap-2">
-        <button
-          className="text-xs px-2 py-1 rounded border"
+      </CardContent>
+      <div className="p-4 pt-0">
+        <Button
+          variant="outline"
+          size="sm"
           disabled={!(status === "submitted" || status === "streaming")}
           onClick={() => stop()}
         >
           Stop
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -272,23 +279,31 @@ function ApiKeyDialog({ onSave }: { onSave: (key: string) => void }) {
   }
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-      <div className="w-full max-w-md bg-white text-black dark:bg-neutral-900 dark:text-white rounded-lg shadow p-4 space-y-3">
-        <h2 className="text-base font-semibold">Enter your OpenRouter API key</h2>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Your key is stored only in your browser (localStorage) and sent with requests from this page.
-        </p>
-        <input
-          autoFocus
-          type="password"
-          className="w-full border rounded px-3 py-2 bg-white text-black dark:bg-neutral-800 dark:text-white"
-          placeholder="sk-or-v1-..."
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-        />
-        <div className="flex justify-end gap-2">
-          <button className="border rounded px-3 py-2" onClick={save}>Save</button>
-        </div>
-      </div>
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Enter your OpenRouter API key</CardTitle>
+          <CardDescription>
+            Your key is stored only in your browser (localStorage) and sent with requests from this page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="api-key">API Key</Label>
+            <Input
+              id="api-key"
+              autoFocus
+              type="password"
+              placeholder="sk-or-v1-..."
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && save()}
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={save}>Save</Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -296,11 +311,13 @@ function ApiKeyDialog({ onSave }: { onSave: (key: string) => void }) {
 function StatsDisplay({ 
   votes, 
   models, 
-  onReset 
+  onReset,
+  onExport
 }: { 
   votes: ArenaVote[]
   models: OpenRouterModel[]
-  onReset: () => void 
+  onReset: () => void
+  onExport: () => void
 }) {
   const counts = useMemo(() => aggregateWinnerCounts(votes), [votes])
   
@@ -336,14 +353,21 @@ function StatsDisplay({
 
   if (votes.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>No votes yet</CardTitle>
-          <CardDescription>
-            Start comparing models to see your preference statistics here.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            View Stats (0 votes)
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>No votes yet</DialogTitle>
+            <DialogDescription>
+              Start comparing models to see your preference statistics here.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     )
   }
 
@@ -434,54 +458,105 @@ function StatsDisplay({
             </Card>
           </TabsContent>
           
-          <TabsContent value="insights" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Total Comparisons</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{votes.length}</div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Models Tested</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{Object.keys(counts).length}</div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Model</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {sortedCounts.length > 0 && (
-                    <div>
-                      <div className="font-semibold">{sortedCounts[0].name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {sortedCounts[0].count} wins ({sortedCounts[0].winRate}%)
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="destructive" onClick={onReset} size="sm">
-                    Reset All Data
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+                     <TabsContent value="insights" className="space-y-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+               <Card>
+                 <CardHeader>
+                   <CardTitle>Total Comparisons</CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="text-3xl font-bold">{votes.length}</div>
+                 </CardContent>
+               </Card>
+               
+               <Card>
+                 <CardHeader>
+                   <CardTitle>Models Tested</CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="text-3xl font-bold">{
+                     new Set([
+                       ...votes.map(v => v.modelAId),
+                       ...votes.map(v => v.modelBId)
+                     ]).size
+                   }</div>
+                 </CardContent>
+               </Card>
+               
+               <Card>
+                 <CardHeader>
+                   <CardTitle>Top Model</CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   {sortedCounts.length > 0 ? (
+                     <div>
+                       <div className="font-semibold">{sortedCounts[0].name}</div>
+                       <div className="text-sm text-muted-foreground">
+                         {sortedCounts[0].count} wins ({sortedCounts[0].winRate}%)
+                       </div>
+                     </div>
+                   ) : (
+                     <div className="text-sm text-muted-foreground">No votes yet</div>
+                   )}
+                 </CardContent>
+               </Card>
+             </div>
+
+             <Card>
+               <CardHeader>
+                 <CardTitle>🏆 Personal Leaderboard</CardTitle>
+                 <CardDescription>
+                   Your preferred models ranked by wins
+                 </CardDescription>
+               </CardHeader>
+               <CardContent>
+                 {sortedCounts.length === 0 ? (
+                   <div className="text-center py-8 text-muted-foreground">
+                     No data yet. Start comparing models to build your personal leaderboard!
+                   </div>
+                 ) : (
+                   <div className="space-y-2">
+                     {sortedCounts.map((entry, index) => (
+                       <div key={entry.modelId} className="flex items-center justify-between p-3 border rounded-lg">
+                         <div className="flex items-center gap-3">
+                           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                             {index + 1}
+                           </div>
+                           <div>
+                             <div className="font-medium">{entry.name}</div>
+                             <div className="text-xs text-muted-foreground">{entry.modelId}</div>
+                           </div>
+                         </div>
+                         <div className="text-right">
+                           <div className="font-semibold">{entry.count} wins</div>
+                           <div className="text-xs text-muted-foreground">{entry.winRate}% preference</div>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
+
+             <Card className="mt-6">
+               <CardHeader>
+                 <CardTitle>Actions</CardTitle>
+                 <CardDescription>
+                   Manage your arena data
+                 </CardDescription>
+               </CardHeader>
+                                <CardContent className="space-y-2">
+                   <div className="flex gap-2">
+                     <Button variant="outline" onClick={onExport} size="sm" disabled={votes.length === 0}>
+                       📊 Export Stats
+                     </Button>
+                     <Button variant="destructive" onClick={onReset} size="sm">
+                       Reset All Data
+                     </Button>
+                   </div>
+                 </CardContent>
+             </Card>
+           </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
@@ -595,6 +670,28 @@ export default function Arena() {
     }
   }
 
+  const exportStats = () => {
+    const exportData = {
+      votes,
+      exportDate: new Date().toISOString(),
+      summary: {
+        totalVotes: votes.length,
+        modelsTotal: new Set([...votes.map(v => v.modelAId), ...votes.map(v => v.modelBId)]).size,
+        topModels: Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+      }
+    }
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `llm-arena-stats-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="min-h-screen p-6 space-y-4 bg-white text-black dark:bg-black dark:text-white">
       {!apiKey && <ApiKeyDialog onSave={setApiKey} />}
@@ -607,11 +704,29 @@ export default function Arena() {
         </div>
       </div>
 
-      {/* Stats summary with detailed view */}
+            {/* Stats summary with detailed view */}
       <div className="flex flex-wrap items-center gap-2 text-sm">
-
+        {votes.length > 0 && (
+          <>
+            <span className="text-muted-foreground">Personal Leaderboard:</span>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(counts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([id, c], index) => {
+                  const m = models.find((mm) => mm.id === id)
+                  const label = m?.name ? `${m.name}` : id
+                  return (
+                    <Badge key={id} variant={index === 0 ? "default" : "outline"}>
+                      {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"} {label} ({c})
+                    </Badge>
+                  )
+                })}
+            </div>
+          </>
+        )}
         <div className="ml-auto flex gap-2">
-          <StatsDisplay votes={votes} models={models} onReset={resetStats} />
+          <StatsDisplay votes={votes} models={models} onReset={resetStats} onExport={exportStats} />
         </div>
       </div>
 
