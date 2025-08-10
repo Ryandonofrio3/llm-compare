@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
+import Fuse from "fuse.js"
 
 type OpenRouterModel = {
   id: string
@@ -41,31 +42,134 @@ function useModels(apiKey: string | null) {
   return { models, loading, error }
 }
 
-function ModelSelect({
+function ModelSearch({
   label,
   value,
   onChange,
   options,
+  placeholder,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   options: OpenRouterModel[]
+  placeholder?: string
 }) {
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const [query, setQuery] = useState("")
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+
+  const fuse = useMemo(() => {
+    return new Fuse(options, {
+      keys: [
+        { name: "name", weight: 0.6 },
+        { name: "id", weight: 0.4 },
+      ],
+      threshold: 0.35,
+      ignoreLocation: true,
+      includeScore: true,
+    })
+  }, [options])
+
+  const results = useMemo(() => {
+    if (!query) {
+      // Show some defaults (top 20) when no query
+      return options.slice(0, 20)
+    }
+    return fuse.search(query).slice(0, 20).map((r) => r.item)
+  }, [fuse, options, query])
+
+  useEffect(() => {
+    if (results.length === 0) {
+      if (active !== 0) setActive(0)
+      return
+    }
+    if (active >= results.length) {
+      setActive(results.length - 1)
+    } else if (active < 0) {
+      setActive(0)
+    }
+  }, [active, results.length])
+
+  const pick = (m: OpenRouterModel) => {
+    onChange(m.id)
+    setQuery("")
+    setOpen(false)
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) return
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      setActive((a) => Math.min(a + 1, Math.max(results.length - 1, 0)))
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      setActive((a) => Math.max(a - 1, 0))
+    } else if (e.key === "Enter") {
+      e.preventDefault()
+      if (results[active]) pick(results[active])
+    } else if (e.key === "Escape") {
+      setOpen(false)
+    }
+  }
+
+  const selectedLabel = useMemo(() => {
+    const m = options.find((o) => o.id === value)
+    return m ? (m.name ? `${m.name} (${m.id})` : m.id) : value
+  }, [options, value])
+
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-neutral-700 dark:text-neutral-200">{label}</span>
-      <select
-        className="border rounded px-2 py-1 text-sm bg-white text-black dark:bg-neutral-900 dark:text-white"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {options.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.name ? `${m.name} (${m.id})` : m.id}
-          </option>
-        ))}
-      </select>
+    <div className="w-full max-w-md">
+      <label className="block text-sm text-neutral-700 dark:text-neutral-200 mb-1">{label}</label>
+      <div className="relative">
+        <button
+          type="button"
+          className="w-full border rounded px-3 py-2 text-left bg-white text-black dark:bg-neutral-900 dark:text-white"
+          onClick={() => {
+            setOpen((o) => !o)
+            setTimeout(() => inputRef.current?.focus(), 0)
+          }}
+        >
+          {selectedLabel}
+        </button>
+        {open && (
+          <div className="absolute z-50 mt-1 w-full border rounded bg-white text-black dark:bg-neutral-900 dark:text-white shadow">
+            <div className="p-2">
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setActive(0)
+                }}
+                onKeyDown={onKeyDown}
+                placeholder={placeholder || "Search models by name or id..."}
+                className="w-full border rounded px-3 py-2 bg-white text-black dark:bg-neutral-800 dark:text-white"
+              />
+            </div>
+            <ul className="max-h-72 overflow-auto">
+              {results.length === 0 && (
+                <li className="px-3 py-2 text-sm text-neutral-500">No results</li>
+              )}
+              {results.map((m, i) => (
+                <li
+                  key={m.id}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pick(m)}
+                  onMouseEnter={() => setActive(i)}
+                  className={`px-3 py-2 text-sm cursor-pointer ${
+                    i === active ? "bg-neutral-100 dark:bg-neutral-800" : ""
+                  }`}
+                >
+                  <div className="font-medium">{m.name || m.id}</div>
+                  <div className="text-xs text-neutral-600 dark:text-neutral-400">{m.id}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -165,12 +269,8 @@ export default function Arena() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, models.length])
 
-  const chatA = useChat({
-    headers: apiKey ? { "x-openrouter-key": apiKey } : undefined,
-  })
-  const chatB = useChat({
-    headers: apiKey ? { "x-openrouter-key": apiKey } : undefined,
-  })
+  const chatA = useChat()
+  const chatB = useChat()
 
   const [input, setInput] = useState("")
 
@@ -178,8 +278,15 @@ export default function Arena() {
     e.preventDefault()
     const text = input.trim()
     if (!text || !apiKey) return
+
+    // Start fresh for each submission
+    chatA.setMessages([])
+    chatB.setMessages([])
+
     chatA.sendMessage({ text }, { body: { modelId: modelA }, headers: { "x-openrouter-key": apiKey } })
     chatB.sendMessage({ text }, { body: { modelId: modelB }, headers: { "x-openrouter-key": apiKey } })
+
+    // Clear input box
     setInput("")
   }
 
@@ -189,9 +296,9 @@ export default function Arena() {
 
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-lg font-semibold">LLM Arena</h1>
-        <div className="flex items-center gap-3">
-          <ModelSelect label="Model A" value={modelA} onChange={setModelA} options={models} />
-          <ModelSelect label="Model B" value={modelB} onChange={setModelB} options={models} />
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full">
+          <ModelSearch label="Model A" value={modelA} onChange={setModelA} options={models} />
+          <ModelSearch label="Model B" value={modelB} onChange={setModelB} options={models} />
         </div>
       </div>
 
